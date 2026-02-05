@@ -40,7 +40,7 @@
         <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 16px;">
             <div class="flex flex-col gap-2">
                 <label style="color: #a1a1aa; font-size: 10px; font-weight: bold; margin-left: 4px;">FOTO:</label>
-                <div id="photoArea" onclick="if(!photoBuffer) cameraInput.click()">
+                <div id="photoArea" onclick="openCamera()">
                     <div id="photoPlaceholder" class="flex flex-col items-center">
                         <svg class="icon-md" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" opacity="0"/><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zm0-5l-1.83 2H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-5.17L12 2zM5 18V6h14v12H5zm7-10c2.76 0 5 2.24 5 5s-2.24 5-5 5-5-2.24-5-5 2.24-5 5-5z"/></svg>
                         <span style="font-size: 10px; color: #71717a; font-weight: bold; margin-top: 4px;">TIRAR FOTO</span>
@@ -96,30 +96,30 @@
             btnEntregar.disabled = !clientInput.value.trim() || !photoBuffer || isProcessing;
         }
 
-        // --- SOLUÇÃO DE MEMÓRIA PARA ANDROID 13 ---
-        // Usa createImageBitmap para pular o carregamento da imagem gigante na RAM
+        function openCamera() {
+            if(photoBuffer) return;
+            if(previewImg.src) URL.revokeObjectURL(previewImg.src);
+            cameraInput.click();
+        }
+
         async function compressImage(file) {
             try {
-                // Tenta decodificar já redimensionado (Baixo uso de RAM)
                 const bitmap = await createImageBitmap(file, { 
-                    resizeWidth: 1024, 
-                    resizeQuality: 'medium' 
+                    resizeWidth: 800, 
+                    resizeQuality: 'low'
                 });
-                
                 const canvas = document.createElement('canvas');
                 canvas.width = bitmap.width;
                 canvas.height = bitmap.height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(bitmap, 0, 0);
-                
+                bitmap.close();
                 return new Promise(resolve => {
                     canvas.toBlob(blob => {
-                        bitmap.close(); // Limpa memória imediatamente
                         resolve(blob);
-                    }, 'image/jpeg', 0.7);
+                    }, 'image/jpeg', 0.6);
                 });
             } catch (err) {
-                // Fallback de segurança para Androids muito antigos
                 return file; 
             }
         }
@@ -127,25 +127,15 @@
         cameraInput.onchange = async (e) => {
             const file = e.target.files[0];
             if (file) {
-                try {
-                    statusLabel.innerText = "Processando foto...";
-                    // Comprime ANTES de mostrar para não estourar a memória
-                    photoBuffer = await compressImage(file);
-                    
-                    // Limpa URL anterior se existir
-                    if(previewImg.src) URL.revokeObjectURL(previewImg.src);
-                    
-                    previewImg.src = URL.createObjectURL(photoBuffer);
-                    previewImg.classList.remove('hidden');
-                    photoPlaceholder.classList.add('hidden');
-                    btnRemovePhoto.classList.remove('hidden');
-                    statusLabel.innerText = "";
-                    validateForm();
-                    if(!hasLocationInput.checked) setTimeout(startGpsTracking, 1000);
-                } catch(e) {
-                    statusLabel.innerText = "Erro na foto. Tente novamente.";
-                    statusLabel.style.color = "#ef4444";
-                }
+                statusLabel.innerText = "Processando...";
+                photoBuffer = await compressImage(file);
+                previewImg.src = URL.createObjectURL(photoBuffer);
+                previewImg.classList.remove('hidden');
+                photoPlaceholder.classList.add('hidden');
+                btnRemovePhoto.classList.remove('hidden');
+                statusLabel.innerText = "";
+                validateForm();
+                if(!hasLocationInput.checked) setTimeout(startGpsTracking, 1000);
             }
         };
 
@@ -220,37 +210,21 @@
                         mapsUrl = `https://www.google.com/maps/search/?api=1&query=${currentPos.coords.latitude},${currentPos.coords.longitude}`;
                     } else { throw new Error("GPS_FAIL"); }
                 }
-                
                 let message = `CLIENTE: ${clientInput.value.trim().toUpperCase()}\n\n`;
                 if (obsInput.value.trim()) message += `OBS:\n${obsInput.value.trim().toUpperCase()}\n\n`;
                 message += hasLocationInput.checked ? "CLIENTE JÁ TEM LOCALIZAÇÃO ADICIONADA" : mapsUrl;
-                
                 try { await navigator.clipboard.writeText(message); } catch (e) {}
-
                 if (withPhoto && navigator.share && fileBlob) {
                     const sharedFile = new File([fileBlob], "entrega.jpg", { type: "image/jpeg" });
-                    
-                    if (navigator.canShare && navigator.canShare({ files: [sharedFile] })) {
-                        await navigator.share({ 
-                            files: [sharedFile], 
-                            text: message 
-                        });
-                        clearForNextDelivery();
-                    } else {
-                        throw new Error("SHARE_FAIL");
-                    }
+                    await navigator.share({ files: [sharedFile], text: message });
+                    clearForNextDelivery();
                 } else {
                     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
                     clearForNextDelivery();
                 }
             } catch (e) { 
-                if (e.message === "SHARE_FAIL" || !e.message) {
-                    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
-                    clearForNextDelivery();
-                } else {
-                    statusLabel.innerText = e.message === "GPS_FAIL" ? "FALHA NO GPS" : "ERRO";
-                    statusLabel.style.color = "#ef4444";
-                }
+                window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+                clearForNextDelivery();
             }
             isProcessing = false;
             btnEntregar.innerHTML = originalHTML;
@@ -261,22 +235,10 @@
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js').then(reg => {
                     reg.update();
-                    reg.onupdatefound = () => {
-                        const installingWorker = reg.installing;
-                        installingWorker.onstatechange = () => {
-                            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                window.location.reload();
-                            }
-                        };
-                    };
                 });
             });
-            let refreshing = false;
             navigator.serviceWorker.addEventListener('controllerchange', () => {
-                if (!refreshing) {
-                    window.location.reload();
-                    refreshing = true;
-                }
+                window.location.reload();
             });
         }
     </script>
