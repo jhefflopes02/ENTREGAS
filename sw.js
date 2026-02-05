@@ -1,4 +1,4 @@
-const CACHE_NAME = 'casa-eletronicos-v13';
+const CACHE_NAME = 'casa-eletronicos-v14';
 const ASSETS = [
   './',
   './index.html',
