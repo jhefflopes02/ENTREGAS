@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CASA DOS ELETRÔNICOS</title>
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#000000">
+    <link rel="apple-touch-icon" href="icon.png">
     <style>
         body { background-color: #000000; color: white; font-family: sans-serif; -webkit-tap-highlight-color: transparent; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; margin: 0; overscroll-behavior: none; }
         .main-container { flex: 1; display: flex; flex-direction: column; width: 100%; max-width: 400px; margin: 0 auto; padding: 10px 20px 30px 20px; box-sizing: border-box; }
@@ -20,12 +21,12 @@
         .input-dark { background-color: #1c1c1e; border: 1px solid #2c2c2e; border-radius: 12px; color: white; padding: 12px; font-size: 16px; outline: none; width: 100%; box-sizing: border-box; font-family: sans-serif; }
         button:disabled { opacity: 0.3; cursor: not-allowed; }
         .custom-checkbox { appearance: none; width: 24px; height: 24px; border: 2px solid #52525b; border-radius: 4px; background-color: #1c1c1e; display: grid; place-content: center; cursor: pointer; }
-        .custom-checkbox:checked { background-color: #3b82f6; border-color: #3b82f6; }
+        .custom-checkbox:checked { background-color: #EE4B2B; border-color: #EE4B2B; }
         .custom-checkbox:checked::before { content: "✓"; color: white; font-size: 16px; font-weight: bold; }
         #photoArea { position: relative; width: 100%; height: 128px; background-color: #1c1c1e; border-radius: 16px; border: 2px dashed #3f3f46; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; }
         .btn-success { width: 100%; height: 64px; background: #22c55e; color: white; border: none; border-radius: 16px; font-weight: bold; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .btn-danger { background: #ef4444; color: white; border: none; border-radius: 20px; padding: 8px 40px; font-size: 10px; font-weight: bold; cursor: pointer; }
-        .icon-lg { width: 40px; height: 40px; fill: #3b82f6; }
+        .icon-lg { width: 40px; height: 40px; fill: #EE4B2B; }
         .icon-md { width: 32px; height: 32px; fill: #71717a; }
     </style>
 </head>
@@ -40,7 +41,7 @@
         <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 16px;">
             <div class="flex flex-col gap-2">
                 <label style="color: #a1a1aa; font-size: 10px; font-weight: bold; margin-left: 4px;">FOTO:</label>
-                <div id="photoArea" onclick="openCamera()">
+                <div id="photoArea" onclick="if(!photoBuffer) cameraInput.click()">
                     <div id="photoPlaceholder" class="flex flex-col items-center">
                         <svg class="icon-md" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" opacity="0"/><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zm0-5l-1.83 2H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-5.17L12 2zM5 18V6h14v12H5zm7-10c2.76 0 5 2.24 5 5s-2.24 5-5 5-5-2.24-5-5 2.24-5 5-5z"/></svg>
                         <span style="font-size: 10px; color: #71717a; font-weight: bold; margin-top: 4px;">TIRAR FOTO</span>
@@ -91,94 +92,41 @@
         let photoBuffer = null;
         let currentPos = null;
         let watchId = null;
-
         function validateForm() {
             btnEntregar.disabled = !clientInput.value.trim() || !photoBuffer || isProcessing;
         }
-
-        function openCamera() {
-            if(photoBuffer) return;
-            stopGpsTracking(); // Garante que o GPS está desligado ao abrir a câmera
-            if(previewImg.src) URL.revokeObjectURL(previewImg.src);
-            cameraInput.click();
-        }
-
-        async function compressImage(file) {
-            try {
-                const bitmap = await createImageBitmap(file, { 
-                    resizeWidth: 800, 
-                    resizeQuality: 'low'
-                });
-                const canvas = document.createElement('canvas');
-                canvas.width = bitmap.width;
-                canvas.height = bitmap.height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(bitmap, 0, 0);
-                bitmap.close();
-                return new Promise(resolve => {
-                    canvas.toBlob(blob => {
-                        resolve(blob);
-                    }, 'image/jpeg', 0.6);
-                });
-            } catch (err) {
-                return file; 
-            }
-        }
-
-        cameraInput.onchange = async (e) => {
+        cameraInput.onchange = (e) => {
             const file = e.target.files[0];
             if (file) {
-                statusLabel.innerText = "Processando foto...";
-                photoBuffer = await compressImage(file);
-                previewImg.src = URL.createObjectURL(photoBuffer);
+                photoBuffer = file;
+                previewImg.src = URL.createObjectURL(file);
                 previewImg.classList.remove('hidden');
                 photoPlaceholder.classList.add('hidden');
                 btnRemovePhoto.classList.remove('hidden');
-                statusLabel.innerText = "";
                 validateForm();
-                
-                // SÓ COMEÇA O GPS DEPOIS QUE A FOTO JÁ ESTÁ NO APP
-                if(!hasLocationInput.checked) {
-                    setTimeout(startGpsTracking, 500);
-                }
+                if(!hasLocationInput.checked) setTimeout(startGpsTracking, 1000);
             }
         };
-
         function startGpsTracking() {
             if (hasLocationInput.checked || watchId) return;
             statusLabel.innerText = "Buscando GPS...";
             statusLabel.style.color = "#eab308";
-            
-            const options = {
-                enableHighAccuracy: true,
-                maximumAge: 0,
-                timeout: 10000
-            };
-
             watchId = navigator.geolocation.watchPosition((p) => {
                 currentPos = p;
                 const acc = Math.floor(p.coords.accuracy);
                 statusLabel.innerText = `Precisão: ±${acc}m`;
                 statusLabel.style.color = acc <= 15 ? "#22c55e" : "#eab308";
-            }, (err) => {
-                statusLabel.innerText = "Erro GPS. Verifique permissão.";
-            }, options);
+            }, null, { enableHighAccuracy: true, maximumAge: 0 });
         }
-
         function stopGpsTracking() {
-            if (watchId) { 
-                navigator.geolocation.clearWatch(watchId); 
-                watchId = null; 
-            }
+            if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
             currentPos = null;
             statusLabel.innerText = "";
         }
-
         function toggleGpsOnCheckbox() {
             if (hasLocationInput.checked) stopGpsTracking();
             else if (photoBuffer) startGpsTracking();
         }
-
         function clearForNextDelivery() {
             if(previewImg.src) URL.revokeObjectURL(previewImg.src);
             photoBuffer = null;
@@ -193,7 +141,6 @@
             stopGpsTracking();
             validateForm();
         }
-
         function clearStoredPhoto() {
             if(previewImg.src) URL.revokeObjectURL(previewImg.src);
             photoBuffer = null;
@@ -204,66 +151,57 @@
             stopGpsTracking();
             validateForm();
         }
-
         function handleExit() {
             window.close();
             window.location.href = "about:blank";
         }
-
-        async function startProcess(withPhoto, fileBlob) {
+        async function startProcess(withPhoto, file = null) {
             if (isProcessing) return;
             isProcessing = true;
             const originalHTML = btnEntregar.innerHTML;
             btnEntregar.innerHTML = "ENVIANDO...";
             btnEntregar.disabled = true;
-            
             try {
                 let mapsUrl = "";
                 if (!hasLocationInput.checked) {
                     if (!currentPos) {
                         statusLabel.innerText = "Aguardando GPS...";
-                        // Espera um pouco mais se ainda não pegou a posição
                         await new Promise(resolve => setTimeout(resolve, 3000));
                     }
                     if (currentPos) {
                         mapsUrl = `https://www.google.com/maps/search/?api=1&query=${currentPos.coords.latitude},${currentPos.coords.longitude}`;
                     } else { throw new Error("GPS_FAIL"); }
                 }
-                
                 let message = `CLIENTE: ${clientInput.value.trim().toUpperCase()}\n\n`;
                 if (obsInput.value.trim()) message += `OBS:\n${obsInput.value.trim().toUpperCase()}\n\n`;
                 message += hasLocationInput.checked ? "CLIENTE JÁ TEM LOCALIZAÇÃO ADICIONADA" : mapsUrl;
-                
-                try { await navigator.clipboard.writeText(message); } catch (e) {}
-
-                if (withPhoto && navigator.share && fileBlob) {
-                    const sharedFile = new File([fileBlob], "entrega.jpg", { type: "image/jpeg" });
-                    await navigator.share({ files: [sharedFile], text: message });
+                if (withPhoto && navigator.share && file) {
+                    await navigator.share({ files: [new File([file], "entrega.jpg", { type: "image/jpeg" })], text: message });
                     clearForNextDelivery();
                 } else {
                     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
                     clearForNextDelivery();
                 }
             } catch (e) { 
-                if(e.message === "GPS_FAIL") {
-                    statusLabel.innerText = "Aguarde o sinal do GPS";
-                    statusLabel.style.color = "#ef4444";
-                } else {
-                    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
-                    clearForNextDelivery();
-                }
+                statusLabel.innerText = e.message === "GPS_FAIL" ? "FALHA NO GPS" : "ENVIO CANCELADO";
+                statusLabel.style.color = "#ef4444";
             }
             isProcessing = false;
             btnEntregar.innerHTML = originalHTML;
             validateForm();
         }
-
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js');
-            });
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                window.location.reload();
+                navigator.serviceWorker.register('./sw.js').then(reg => {
+                    reg.onupdatefound = () => {
+                        const installingWorker = reg.installing;
+                        installingWorker.onstatechange = () => {
+                            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                window.location.reload();
+                            }
+                        };
+                    };
+                });
             });
         }
     </script>
