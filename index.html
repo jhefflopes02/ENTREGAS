@@ -183,6 +183,9 @@
                 let message = `CLIENTE: ${clientInput.value.trim().toUpperCase()}\n\n`;
                 if (obsInput.value.trim()) message += `OBS:\n${obsInput.value.trim().toUpperCase()}\n\n`;
                 message += hasLocationInput.checked ? "CLIENTE JÁ TEM LOCALIZAÇÃO ADICIONADA" : mapsUrl;
+                
+                try { await navigator.clipboard.writeText(message); } catch (e) {}
+
                 if (withPhoto && navigator.share && file) {
                     await navigator.share({ files: [new File([file], "entrega.jpg", { type: "image/jpeg" })], text: message });
                     clearForNextDelivery();
