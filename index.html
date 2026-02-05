@@ -98,6 +98,7 @@
 
         function openCamera() {
             if(photoBuffer) return;
+            stopGpsTracking(); // Garante que o GPS está desligado ao abrir a câmera
             if(previewImg.src) URL.revokeObjectURL(previewImg.src);
             cameraInput.click();
         }
@@ -127,7 +128,7 @@
         cameraInput.onchange = async (e) => {
             const file = e.target.files[0];
             if (file) {
-                statusLabel.innerText = "Processando...";
+                statusLabel.innerText = "Processando foto...";
                 photoBuffer = await compressImage(file);
                 previewImg.src = URL.createObjectURL(photoBuffer);
                 previewImg.classList.remove('hidden');
@@ -135,7 +136,11 @@
                 btnRemovePhoto.classList.remove('hidden');
                 statusLabel.innerText = "";
                 validateForm();
-                if(!hasLocationInput.checked) setTimeout(startGpsTracking, 1000);
+                
+                // SÓ COMEÇA O GPS DEPOIS QUE A FOTO JÁ ESTÁ NO APP
+                if(!hasLocationInput.checked) {
+                    setTimeout(startGpsTracking, 500);
+                }
             }
         };
 
@@ -143,16 +148,28 @@
             if (hasLocationInput.checked || watchId) return;
             statusLabel.innerText = "Buscando GPS...";
             statusLabel.style.color = "#eab308";
+            
+            const options = {
+                enableHighAccuracy: true,
+                maximumAge: 0,
+                timeout: 10000
+            };
+
             watchId = navigator.geolocation.watchPosition((p) => {
                 currentPos = p;
                 const acc = Math.floor(p.coords.accuracy);
                 statusLabel.innerText = `Precisão: ±${acc}m`;
                 statusLabel.style.color = acc <= 15 ? "#22c55e" : "#eab308";
-            }, null, { enableHighAccuracy: true, maximumAge: 0 });
+            }, (err) => {
+                statusLabel.innerText = "Erro GPS. Verifique permissão.";
+            }, options);
         }
 
         function stopGpsTracking() {
-            if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+            if (watchId) { 
+                navigator.geolocation.clearWatch(watchId); 
+                watchId = null; 
+            }
             currentPos = null;
             statusLabel.innerText = "";
         }
@@ -199,21 +216,26 @@
             const originalHTML = btnEntregar.innerHTML;
             btnEntregar.innerHTML = "ENVIANDO...";
             btnEntregar.disabled = true;
+            
             try {
                 let mapsUrl = "";
                 if (!hasLocationInput.checked) {
                     if (!currentPos) {
                         statusLabel.innerText = "Aguardando GPS...";
+                        // Espera um pouco mais se ainda não pegou a posição
                         await new Promise(resolve => setTimeout(resolve, 3000));
                     }
                     if (currentPos) {
                         mapsUrl = `https://www.google.com/maps/search/?api=1&query=${currentPos.coords.latitude},${currentPos.coords.longitude}`;
                     } else { throw new Error("GPS_FAIL"); }
                 }
+                
                 let message = `CLIENTE: ${clientInput.value.trim().toUpperCase()}\n\n`;
                 if (obsInput.value.trim()) message += `OBS:\n${obsInput.value.trim().toUpperCase()}\n\n`;
                 message += hasLocationInput.checked ? "CLIENTE JÁ TEM LOCALIZAÇÃO ADICIONADA" : mapsUrl;
+                
                 try { await navigator.clipboard.writeText(message); } catch (e) {}
+
                 if (withPhoto && navigator.share && fileBlob) {
                     const sharedFile = new File([fileBlob], "entrega.jpg", { type: "image/jpeg" });
                     await navigator.share({ files: [sharedFile], text: message });
@@ -223,8 +245,13 @@
                     clearForNextDelivery();
                 }
             } catch (e) { 
-                window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
-                clearForNextDelivery();
+                if(e.message === "GPS_FAIL") {
+                    statusLabel.innerText = "Aguarde o sinal do GPS";
+                    statusLabel.style.color = "#ef4444";
+                } else {
+                    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+                    clearForNextDelivery();
+                }
             }
             isProcessing = false;
             btnEntregar.innerHTML = originalHTML;
@@ -233,9 +260,7 @@
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').then(reg => {
-                    reg.update();
-                });
+                navigator.serviceWorker.register('./sw.js');
             });
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 window.location.reload();
