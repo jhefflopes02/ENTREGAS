@@ -4,9 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CASA DOS ELETRÔNICOS</title>
-    <link rel="manifest" href="./manifest.json">
+    <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#000000">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="icon.png">
+    
     <style>
         body { background-color: #000000; color: white; font-family: sans-serif; -webkit-tap-highlight-color: transparent; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; margin: 0; overscroll-behavior: none; }
         .main-container { flex: 1; display: flex; flex-direction: column; width: 100%; max-width: 400px; margin: 0 auto; padding: 10px 20px 30px 20px; box-sizing: border-box; }
@@ -77,7 +80,10 @@
         </div>
     </div>
     <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden">
+
     <script>
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(() => {}); }
+
         const clientInput = document.getElementById('clientName');
         const obsInput = document.getElementById('observations');
         const hasLocationInput = document.getElementById('hasLocation');
@@ -207,8 +213,8 @@
         }
 
         function handleExit() {
+            stopGpsTracking();
             window.close();
-            window.location.href = "about:blank";
         }
 
         async function startProcess(withPhoto) {
@@ -225,7 +231,7 @@
                         await new Promise(resolve => setTimeout(resolve, 3000));
                     }
                     if (currentPos) {
-                        mapsUrl = `https://www.google.com/maps/search/?api=1&query=${currentPos.coords.latitude},${currentPos.coords.longitude}`;
+                        mapsUrl = `https://www.google.com/maps?q=${currentPos.coords.latitude},${currentPos.coords.longitude}`;
                     } else { throw new Error("GPS_FAIL"); }
                 }
                 let message = `CLIENTE: ${clientInput.value.trim().toUpperCase()}\n\n`;
@@ -247,21 +253,6 @@
             isProcessing = false;
             btnEntregar.innerHTML = originalHTML;
             validateForm();
-        }
-
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').then(reg => {
-                    reg.onupdatefound = () => {
-                        const installingWorker = reg.installing;
-                        installingWorker.onstatechange = () => {
-                            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                window.location.reload();
-                            }
-                        };
-                    };
-                });
-            });
         }
     </script>
 </body>
