@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jhefflopes';
+const CACHE_NAME = 'jhefflopes01';
 const ASSETS = [
   './',
   './index.html',
