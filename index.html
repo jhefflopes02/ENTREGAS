@@ -4,33 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CASA DOS ELETRÔNICOS</title>
-    <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#000000">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="icon.png">
     
     <style>
-        body { background-color: #000000; color: white; font-family: sans-serif; -webkit-tap-highlight-color: transparent; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; margin: 0; overscroll-behavior: none; }
+        body { background-color: #000000; color: white; font-family: sans-serif; -webkit-tap-highlight-color: transparent; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; margin: 0; }
         .main-container { flex: 1; display: flex; flex-direction: column; width: 100%; max-width: 400px; margin: 0 auto; padding: 10px 20px 30px 20px; box-sizing: border-box; }
         .flex { display: flex; }
         .flex-col { flex-direction: column; }
         .items-center { align-items: center; }
-        .justify-center { justify-content: center; }
-        .text-center { text-align: center; }
         .gap-1 { gap: 4px; }
         .gap-2 { gap: 8px; }
         .hidden { display: none !important; }
-        .input-dark { background-color: #1c1c1e; border: 1px solid #2c2c2e; border-radius: 12px; color: white; padding: 12px; font-size: 16px; outline: none; width: 100%; box-sizing: border-box; font-family: sans-serif; }
+        .input-dark { background-color: #1c1c1e; border: 1px solid #2c2c2e; border-radius: 12px; color: white; padding: 12px; font-size: 16px; outline: none; width: 100%; box-sizing: border-box; }
         button:disabled { opacity: 0.3; cursor: not-allowed; }
+        .btn-photo { flex-grow: 1; background: #3b82f6; color: white; border: none; border-radius: 12px; font-weight: bold; font-size: 16px; height: 50px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; }
+        .btn-success { width: 100%; height: 60px; background: #22c55e; color: white; border: none; border-radius: 16px; font-weight: bold; font-size: 20px; cursor: pointer; }
+        .btn-danger { background: #ef4444; color: white; border: none; border-radius: 20px; padding: 8px 40px; font-size: 10px; font-weight: bold; cursor: pointer; }
         .custom-checkbox { appearance: none; width: 24px; height: 24px; border: 2px solid #52525b; border-radius: 4px; background-color: #1c1c1e; display: grid; place-content: center; cursor: pointer; }
         .custom-checkbox:checked { background-color: #EE4B2B; border-color: #EE4B2B; }
         .custom-checkbox:checked::before { content: "✓"; color: white; font-size: 16px; font-weight: bold; }
-        #photoArea { position: relative; width: 100%; height: 128px; background-color: #1c1c1e; border-radius: 16px; border: 2px dashed #3f3f46; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; }
-        .btn-success { width: 100%; height: 64px; background: #22c55e; color: white; border: none; border-radius: 16px; font-weight: bold; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .btn-danger { background: #ef4444; color: white; border: none; border-radius: 20px; padding: 8px 40px; font-size: 10px; font-weight: bold; cursor: pointer; }
         .icon-lg { width: 40px; height: 40px; fill: #EE4B2B; }
-        .icon-md { width: 32px; height: 32px; fill: #71717a; }
+        .icon-cam { width: 24px; height: 24px; fill: white; }
+        #previewContainer { display: grid; grid-template-columns: repeat(3, 110px); gap: 8px; width: 100%; justify-content: center; box-sizing: border-box; overflow-y: auto; overflow-x: hidden; max-height: 250px; margin-top: 8px; }
+        .thumb-wrapper { position: relative; width: 110px; height: 110px; }
+        .thumb-img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 1px solid #3f3f46; }
+        .thumb-remove { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 14px; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; }
     </style>
 </head>
 <body>
@@ -40,126 +39,116 @@
             <h1 style="font-size: 20px; font-weight: bold; margin: 4px 0 0 0;">CASA DOS ELETRÔNICOS</h1>
             <p style="color: #71717a; font-size: 9px; text-transform: uppercase; letter-spacing: 1px; margin: 0;">Entregas</p>
         </div>
+        
         <div id="statusLabel" style="font-weight: bold; font-size: 10px; height: 24px; text-transform: uppercase; text-align: center; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;"></div>
+        
         <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 16px;">
-            <div class="flex flex-col gap-2">
-                <label style="color: #a1a1aa; font-size: 10px; font-weight: bold; margin-left: 4px;">FOTO:</label>
-                <div id="photoArea" onclick="if(!hasPhotoInDb) cameraInput.click()">
-                    <div id="photoPlaceholder" class="flex flex-col items-center">
-                        <svg class="icon-md" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" opacity="0"/><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zm0-5l-1.83 2H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-5.17L12 2zM5 18V6h14v12H5zm7-10c2.76 0 5 2.24 5 5s-2.24 5-5 5-5-2.24-5-5 2.24-5 5-5z"/></svg>
-                        <span style="font-size: 10px; color: #71717a; font-weight: bold; margin-top: 4px;">TIRAR FOTO</span>
-                    </div>
-                    <img id="previewImg" class="hidden" style="width: 100%; height: 100%; object-fit: cover;">
-                    <button id="btnRemovePhoto" class="hidden" onclick="event.stopPropagation(); clearStoredPhoto()" style="position: absolute; top: 8px; right: 8px; background: #ef4444; border: none; border-radius: 50%; width: 30px; height: 30px; color: white; font-weight: bold;">X</button>
-                </div>
-            </div>
             <div class="flex flex-col gap-1">
-                <label style="color: #a1a1aa; font-size: 10px; font-weight: bold; margin-left: 4px;">CLIENTE:</label>
-                <input type="text" id="clientName" placeholder="Nome do cliente" class="input-dark" oninput="validateForm()">
+                <input type="text" id="clientName" placeholder="NOME DO CLIENTE" class="input-dark" oninput="validateForm()">
             </div>
+
             <div class="flex flex-col gap-1">
-                <label style="color: #a1a1aa; font-size: 10px; font-weight: bold; margin-left: 4px;">OBSERVAÇÕES:</label>
-                <textarea id="observations" rows="2" placeholder="(Opcional)" class="input-dark" style="resize: none;" oninput="validateForm()"></textarea>
+                <textarea id="observations" rows="2" placeholder="OBSERVAÇÕES (OPCIONAL)" class="input-dark" style="resize: none;" oninput="validateForm()"></textarea>
             </div>
+            
             <div class="flex items-center" style="gap: 12px; margin-left: 4px;">
                 <input type="checkbox" id="hasLocation" class="custom-checkbox" onchange="toggleGpsOnCheckbox()">
-                <label for="hasLocation" style="color: #a1a1aa; font-size: 10px; font-weight: bold; cursor: pointer;">JÁ TEM LOCALIZAÇÃO</label>
+                <label for="hasLocation" style="color: #a1a1aa; font-size: 10px; font-weight: bold; cursor: pointer;">NÃO ENVIAR LOCALIZAÇÃO</label>
             </div>
-            <div style="padding-top: 8px;">
-                <button id="btnEntregar" onclick="startProcess(true)" disabled class="btn-success">
-                    ENVIAR
+            
+            <div class="flex gap-2 items-center">
+                <button id="btnPhoto" class="btn-photo" onclick="cameraInput.click()">
+                    <svg class="icon-cam" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/><path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
+                    FOTO
                 </button>
             </div>
+
+            <div>
+                <button id="btnEntregar" onclick="startProcess()" disabled class="btn-success">ENVIAR</button>
+            </div>
+
+            <div id="previewContainer"></div>
         </div>
-        <div style="margin-top: 16px; text-align: center;">
-            <div style="opacity: 0.4; margin-bottom: 16px;">
+
+        <div style="margin-top: 10px; text-align: center;">
+            <div style="opacity: 0.4; margin-bottom: 10px;">
                 <p style="font-size: 8px; color: #71717a; margin: 0;">DESENVOLVIDO POR:</p>
                 <p style="font-size: 9px; color: #a1a1aa; font-weight: bold; margin: 0;">JHEFF LOPES</p>
             </div>
             <button onclick="handleExit()" class="btn-danger">SAIR</button>
         </div>
     </div>
+    
     <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden">
 
     <script>
-        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(() => {}); }
-
         const clientInput = document.getElementById('clientName');
         const obsInput = document.getElementById('observations');
         const hasLocationInput = document.getElementById('hasLocation');
         const cameraInput = document.getElementById('cameraInput');
         const statusLabel = document.getElementById('statusLabel');
-        const previewImg = document.getElementById('previewImg');
-        const photoPlaceholder = document.getElementById('photoPlaceholder');
-        const btnRemovePhoto = document.getElementById('btnRemovePhoto');
         const btnEntregar = document.getElementById('btnEntregar');
+        const btnPhoto = document.getElementById('btnPhoto');
+        const previewContainer = document.getElementById('previewContainer');
+        
         let isProcessing = false;
-        let hasPhotoInDb = false;
+        let photoFiles = []; 
         let currentPos = null;
         let watchId = null;
 
-        const dbName = "DeliveryDB";
-        const storeName = "temp_store";
-
-        function openDB() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open(dbName, 1);
-                request.onupgradeneeded = (e) => {
-                    const db = e.target.result;
-                    if (!db.objectStoreNames.contains(storeName)) db.createObjectStore(storeName);
-                };
-                request.onsuccess = (e) => resolve(e.target.result);
-                request.onerror = (e) => reject(e.target.error);
-            });
-        }
-
-        async function savePhoto(file) {
-            const db = await openDB();
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction(storeName, "readwrite");
-                tx.objectStore(storeName).put(file, "current_photo");
-                tx.oncomplete = () => resolve();
-                tx.onerror = () => reject();
-            });
-        }
-
-        async function getPhoto() {
-            const db = await openDB();
-            return new Promise((resolve) => {
-                const tx = db.transaction(storeName, "readonly");
-                const request = tx.objectStore(storeName).get("current_photo");
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = () => resolve(null);
-            });
-        }
-
-        async function deletePhoto() {
-            const db = await openDB();
-            return new Promise((resolve) => {
-                const tx = db.transaction(storeName, "readwrite");
-                tx.objectStore(storeName).delete("current_photo");
-                tx.oncomplete = () => resolve();
-            });
-        }
+        const defaultBtnHtml = `<svg class="icon-cam" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/><path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg> FOTO`;
 
         function validateForm() {
-            btnEntregar.disabled = !clientInput.value.trim() || !hasPhotoInDb || isProcessing;
+            btnEntregar.disabled = !clientInput.value.trim() || photoFiles.length === 0 || isProcessing;
         }
 
-        cameraInput.onchange = async (e) => {
+        cameraInput.onchange = (e) => {
             const file = e.target.files[0];
             if (file) {
-                await savePhoto(file);
-                hasPhotoInDb = true;
-                if (previewImg.src) URL.revokeObjectURL(previewImg.src);
-                previewImg.src = URL.createObjectURL(file);
-                previewImg.classList.remove('hidden');
-                photoPlaceholder.classList.add('hidden');
-                btnRemovePhoto.classList.remove('hidden');
+                photoFiles.push(file);
+                renderPreviews();
+                
+                if (photoFiles.length > 0) {
+                    btnPhoto.innerHTML = "+";
+                    btnPhoto.style.fontSize = "32px";
+                    if(!hasLocationInput.checked) setTimeout(startGpsTracking, 500);
+                }
+                
                 validateForm();
-                if(!hasLocationInput.checked) setTimeout(startGpsTracking, 1000);
+                cameraInput.value = "";
             }
         };
+
+        function renderPreviews() {
+            previewContainer.innerHTML = "";
+            photoFiles.forEach((file, index) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = "thumb-wrapper";
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.className = "thumb-img";
+                const btnRemove = document.createElement('button');
+                btnRemove.innerText = "X";
+                btnRemove.className = "thumb-remove";
+                btnRemove.onclick = () => removePhoto(index);
+                wrapper.appendChild(img);
+                wrapper.appendChild(btnRemove);
+                previewContainer.appendChild(wrapper);
+            });
+        }
+
+        function removePhoto(index) {
+            photoFiles.splice(index, 1);
+            renderPreviews();
+            
+            if (photoFiles.length === 0) {
+                btnPhoto.innerHTML = defaultBtnHtml;
+                btnPhoto.style.fontSize = "16px";
+                stopGpsTracking();
+            }
+            
+            validateForm();
+        }
 
         function startGpsTracking() {
             if (hasLocationInput.checked || watchId) return;
@@ -181,18 +170,22 @@
 
         function toggleGpsOnCheckbox() {
             if (hasLocationInput.checked) stopGpsTracking();
-            else if (hasPhotoInDb) startGpsTracking();
+            else if (photoFiles.length > 0) startGpsTracking();
         }
 
-        async function clearForNextDelivery() {
-            await deletePhoto();
-            if(previewImg.src) URL.revokeObjectURL(previewImg.src);
-            hasPhotoInDb = false;
-            cameraInput.value = "";
-            previewImg.classList.add('hidden');
-            previewImg.src = "";
-            photoPlaceholder.classList.remove('hidden');
-            btnRemovePhoto.classList.add('hidden');
+        function handleExit() {
+            stopGpsTracking();
+            clearForm();
+            setTimeout(() => {
+                window.location.href = "about:blank";
+            }, 100);
+        }
+
+        function clearForm() {
+            photoFiles = [];
+            renderPreviews();
+            btnPhoto.innerHTML = defaultBtnHtml;
+            btnPhoto.style.fontSize = "16px";
             clientInput.value = "";
             obsInput.value = "";
             hasLocationInput.checked = false;
@@ -200,29 +193,13 @@
             validateForm();
         }
 
-        async function clearStoredPhoto() {
-            await deletePhoto();
-            if(previewImg.src) URL.revokeObjectURL(previewImg.src);
-            hasPhotoInDb = false;
-            cameraInput.value = "";
-            previewImg.classList.add('hidden');
-            photoPlaceholder.classList.remove('hidden');
-            btnRemovePhoto.classList.add('hidden');
-            stopGpsTracking();
-            validateForm();
-        }
-
-        function handleExit() {
-            stopGpsTracking();
-            window.close();
-        }
-
-        async function startProcess(withPhoto) {
+        async function startProcess() {
             if (isProcessing) return;
             isProcessing = true;
             const originalHTML = btnEntregar.innerHTML;
             btnEntregar.innerHTML = "ENVIANDO...";
             btnEntregar.disabled = true;
+
             try {
                 let mapsUrl = "";
                 if (!hasLocationInput.checked) {
@@ -234,22 +211,29 @@
                         mapsUrl = `https://www.google.com/maps/search/?api=1&query=${currentPos.coords.latitude},${currentPos.coords.longitude}`;
                     } else { throw new Error("GPS_FAIL"); }
                 }
+
                 let message = `CLIENTE: ${clientInput.value.trim().toUpperCase()}\n\n`;
                 if (obsInput.value.trim()) message += `OBS:\n${obsInput.value.trim().toUpperCase()}\n\n`;
-                message += hasLocationInput.checked ? "CLIENTE JÁ TEM LOCALIZAÇÃO ADICIONADA" : mapsUrl;
-                
-                const file = await getPhoto();
-                if (withPhoto && navigator.share && file) {
-                    await navigator.share({ files: [new File([file], "entrega.jpg", { type: "image/jpeg" })], text: message });
-                    await clearForNextDelivery();
+                if (!hasLocationInput.checked) message += mapsUrl;
+
+                if (navigator.share && photoFiles.length > 0) {
+                    await navigator.share({ 
+                        files: photoFiles,
+                        text: message 
+                    });
+                    clearForm();
                 } else {
                     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
-                    await clearForNextDelivery();
+                    clearForm();
                 }
-            } catch (e) { 
-                statusLabel.innerText = e.message === "GPS_FAIL" ? "FALHA NO GPS" : "ENVIO CANCELADO";
-                statusLabel.style.color = "#ef4444";
+
+            } catch (e) {
+                if (e.name !== 'AbortError') {
+                    statusLabel.innerText = e.message === "GPS_FAIL" ? "FALHA NO GPS" : "ERRO AO ENVIAR";
+                    statusLabel.style.color = "#ef4444";
+                }
             }
+
             isProcessing = false;
             btnEntregar.innerHTML = originalHTML;
             validateForm();
