@@ -175,10 +175,7 @@
 
         function handleExit() {
             stopGpsTracking();
-            clearForm();
-            setTimeout(() => {
-                window.location.href = "about:blank";
-            }, 100);
+            window.close();
         }
 
         function clearForm() {
